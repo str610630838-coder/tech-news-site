@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>今日科技快讯</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600;800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0a0a0f;
+  --surface: #14141f;
+  --card: #1a1a2e;
+  --accent: #e94560;
+  --accent2: #0f3460;
+  --text: #eaeaea;
+  --text-dim: #8888a0;
+  --border: #2a2a40;
+  --glow: rgba(233, 69, 96, 0.25);
+}
+
+html { font-size: 16px; }
+
+body {
+  font-family: 'Noto Sans SC', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+  padding-bottom: env(safe-area-inset-bottom, 20px);
+}
+
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(233,69,96,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(233,69,96,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(10,10,15,0.85);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 20px;
+  padding-top: calc(env(safe-area-inset-top, 12px) + 12px);
+}
+
+.header-row {
+  display: flex; align-items: center; justify-content: space-between;
+  max-width: 720px; margin: 0 auto;
+}
+
+.logo {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.35rem; font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), #ff6b6b);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; letter-spacing: -0.5px;
+}
+
+.logo span { font-size: 0.7rem; vertical-align: super; opacity: 0.7; }
+
+#refreshBtn {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 24px;
+  padding: 8px 18px; font-size: 0.85rem;
+  font-weight: 600; cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 2px 12px var(--glow);
+}
+
+#refreshBtn:active { transform: scale(0.94); }
+#refreshBtn.spinning .refresh-icon { animation: spin 0.8s linear infinite; }
+
+.refresh-icon {
+  width: 16px; height: 16px; display: inline-block;
+  transition: transform 0.3s;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.tabs {
+  display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
+  max-width: 720px; margin: 12px auto 0;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab {
+  flex-shrink: 0;
+  background: var(--surface); color: var(--text-dim);
+  border: 1px solid var(--border); border-radius: 20px;
+  padding: 6px 16px; font-size: 0.8rem;
+  font-weight: 600; cursor: pointer;
+  font-family: inherit; transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.tab.active {
+  background: var(--accent); color: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 2px 10px var(--glow);
+}
+
+.tab:active { transform: scale(0.95); }
+
+main {
+  position: relative; z-index: 1;
+  max-width: 720px; margin: 0 auto;
+  padding: 16px 16px 40px;
+}
+
+.status-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px; font-size: 0.78rem; color: var(--text-dim);
+}
+
+.status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #4ade80; display: inline-block;
+  margin-right: 6px; animation: pulse 2s infinite;
+}
+.status-dot.error { background: var(--accent); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.news-list { display: flex; flex-direction: column; gap: 12px; }
+
+.news-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  text-decoration: none; color: inherit;
+  display: block;
+  transition: transform 0.15s, border-color 0.2s, box-shadow 0.2s;
+  animation: fadeUp 0.4s ease-out both;
+}
+
+.news-card:active {
+  transform: scale(0.98);
+  border-color: var(--accent);
+  box-shadow: 0 0 20px var(--glow);
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+
+.card-source {
+  font-size: 0.7rem; font-weight: 600;
+  padding: 3px 8px; border-radius: 6px;
+  background: var(--accent2); color: #7eb8f7;
+}
+
+.card-time { font-size: 0.7rem; color: var(--text-dim); }
+
+.card-score {
+  margin-left: auto; font-size: 0.7rem;
+  color: var(--accent); font-weight: 600;
+}
+
+.card-title {
+  font-size: 0.95rem; font-weight: 600;
+  line-height: 1.5; margin-bottom: 8px;
+  display: -webkit-box; -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+
+.card-domain {
+  font-size: 0.72rem; color: var(--text-dim);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--card) 25%, #252540 50%, var(--card) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 14px; height: 120px;
+  border: 1px solid var(--border);
+}
+
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+.error-box {
+  text-align: center; padding: 48px 20px;
+  color: var(--text-dim);
+}
+
+.error-box .icon { font-size: 2.5rem; margin-bottom: 12px; }
+.error-box .msg { font-size: 0.9rem; margin-bottom: 16px; line-height: 1.6; }
+
+.error-box button {
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 10px;
+  padding: 10px 28px; font-size: 0.88rem;
+  font-weight: 600; cursor: pointer;
+  font-family: inherit;
+}
+
+.empty-msg {
+  text-align: center; padding: 48px 20px;
+  color: var(--text-dim); font-size: 0.9rem;
+}
+
+footer {
+  text-align: center; padding: 20px;
+  font-size: 0.72rem; color: var(--text-dim);
+  position: relative; z-index: 1;
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<header>
+  <div class="header-row">
+    <div class="logo">TECH//NEWS <span>TODAY</span></div>
+    <button id="refreshBtn" onclick="refreshAll()">
+      <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+        <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+      </svg>
+      刷新
+    </button>
+  </div>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-source="all" onclick="switchTab(this)">全部</button>
+    <button class="tab" data-source="hn" onclick="switchTab(this)">Hacker News</button>
+    <button class="tab" data-source="github" onclick="switchTab(this)">GitHub 热榜</button>
+    <button class="tab" data-source="producthunt" onclick="switchTab(this)">Product Hunt</button>
+    <button class="tab" data-source="reddit" onclick="switchTab(this)">Reddit Tech</button>
+  </div>
+</header>
+
+<main>
+  <div class="status-bar">
+    <div><span class="status-dot" id="statusDot"></span><span id="statusText">准备就绪</span></div>
+    <div id="updateTime">--</div>
+  </div>
+  <div class="news-list" id="newsList"></div>
+</main>
+
+<footer>数据来源: Hacker News API / GitHub Trending / Product Hunt / Reddit</footer>
+
+<script>
+const API = {
+  hn: {
+    top: 'https://hacker-news.firebaseio.com/v0/topstories.json',
+    item: id => `https://hacker-news.firebaseio.com/v0/item/${id}.json`,
+  },
+  github: 'https://api.github.com/search/repositories?q=created:>{dateStr}+language:*&sort=stars&order=desc&per_page=20',
+  producthunt: 'https://www.producthunt.com/.well-known/apollo/api',
+  reddit: 'https://www.reddit.com/r/technology/hot.json?limit=25&raw_json=1',
+};
+
+let allNews = [];
+let currentSource = 'all';
+let isLoading = false;
+
+function timeAgo(ts) {
+  const sec = Math.floor((Date.now() / 1000) - ts);
+  if (sec < 60) return '刚刚';
+  if (sec < 3600) return Math.floor(sec / 60) + ' 分钟前';
+  if (sec < 86400) return Math.floor(sec / 3600) + ' 小时前';
+  return Math.floor(sec / 86400) + ' 天前';
+}
+
+function dateAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const hours = Math.floor(diff / 3600000);
+  if (hours < 1) return '刚刚';
+  if (hours < 24) return hours + ' 小时前';
+  return Math.floor(hours / 24) + ' 天前';
+}
+
+function extractDomain(url) {
+  try { return new URL(url).hostname.replace('www.', ''); } catch { return ''; }
+}
+
+function todayStr() {
+  const d = new Date();
+  return d.toISOString().split('T')[0];
+}
+
+function setStatus(text, isError) {
+  document.getElementById('statusText').textContent = text;
+  const dot = document.getElementById('statusDot');
+  dot.className = isError ? 'status-dot error' : 'status-dot';
+}
+
+function setUpdateTime() {
+  const now = new Date();
+  const t = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('updateTime').textContent = '更新于 ' + t;
+}
+
+function showSkeleton(count = 6) {
+  const el = document.getElementById('newsList');
+  el.innerHTML = Array(count).fill('<div class="skeleton"></div>').join('');
+}
+
+function renderNews(items) {
+  const el = document.getElementById('newsList');
+  if (!items.length) {
+    el.innerHTML = '<div class="empty-msg">暂无相关新闻，试试刷新或切换分类</div>';
+    return;
+  }
+  el.innerHTML = items.map((n, i) => `
+    <a class="news-card" href="${n.url}" target="_blank" rel="noopener"
+       style="animation-delay:${i * 0.04}s">
+      <div class="card-top">
+        <span class="card-source">${n.source}</span>
+        <span class="card-time">${n.time}</span>
+        ${n.score ? `<span class="card-score">${n.score}</span>` : ''}
+      </div>
+      <div class="card-title">${n.title}</div>
+      ${n.domain ? `<div class="card-domain">${n.domain}</div>` : ''}
+    </a>
+  `).join('');
+}
+
+function showError(msg) {
+  const el = document.getElementById('newsList');
+  el.innerHTML = `
+    <div class="error-box">
+      <div class="icon">&#x26A0;</div>
+      <div class="msg">${msg}</div>
+      <button onclick="refreshAll()">重新加载</button>
+    </div>`;
+}
+
+async function fetchHN() {
+  try {
+    const res = await fetch(API.hn.top);
+    const ids = (await res.json()).slice(0, 30);
+    const items = await Promise.all(
+      ids.map(id => fetch(API.hn.item(id)).then(r => r.json()))
+    );
+    return items
+      .filter(it => it && it.title)
+      .map(it => ({
+        title: it.title,
+        url: it.url || `https://news.ycombinator.com/item?id=${it.id}`,
+        source: 'Hacker News',
+        sourceKey: 'hn',
+        time: timeAgo(it.time),
+        ts: it.time * 1000,
+        score: it.score ? `${it.score} pts` : '',
+        domain: it.url ? extractDomain(it.url) : 'news.ycombinator.com',
+      }));
+  } catch (e) {
+    console.warn('HN fetch error:', e);
+    return [];
+  }
+}
+
+async function fetchGitHub() {
+  try {
+    const d = new Date(); d.setDate(d.getDate() - 1);
+    const dateStr = d.toISOString().split('T')[0];
+    const url = `https://api.github.com/search/repositories?q=created:>${dateStr}&sort=stars&order=desc&per_page=20`;
+    const res = await fetch(url, { headers: { 'Accept': 'application/vnd.github.v3+json' } });
+    const data = await res.json();
+    return (data.items || []).map(r => ({
+      title: `${r.full_name} - ${r.description || '无描述'}`,
+      url: r.html_url,
+      source: 'GitHub',
+      sourceKey: 'github',
+      time: dateAgo(r.created_at),
+      ts: new Date(r.created_at).getTime(),
+      score: `★ ${r.stargazers_count}`,
+      domain: 'github.com',
+    }));
+  } catch (e) {
+    console.warn('GitHub fetch error:', e);
+    return [];
+  }
+}
+
+async function fetchProductHunt() {
+  try {
+    const today = todayStr();
+    const url = `https://www.producthunt.com/frontend/graphql`;
+    const query = {
+      query: `query { posts(order: VOTES, postedAfter: "${today}T00:00:00Z") { edges { node { name tagline url votesCount website } } } }`
+    };
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(query),
+    });
+    const data = await res.json();
+    const edges = data?.data?.posts?.edges || [];
+    return edges.map(e => ({
+      title: `${e.node.name} — ${e.node.tagline}`,
+      url: e.node.website || e.node.url,
+      source: 'Product Hunt',
+      sourceKey: 'producthunt',
+      time: '今天',
+      ts: Date.now(),
+      score: `▲ ${e.node.votesCount}`,
+      domain: extractDomain(e.node.website || e.node.url),
+    }));
+  } catch (e) {
+    console.warn('PH fetch error:', e);
+    return [];
+  }
+}
+
+async function fetchReddit() {
+  try {
+    const res = await fetch(API.reddit);
+    const data = await res.json();
+    const posts = data?.data?.children || [];
+    return posts
+      .filter(p => p.data && !p.data.stickied)
+      .map(p => ({
+        title: p.data.title,
+        url: p.data.url_overridden_by_dest || `https://reddit.com${p.data.permalink}`,
+        source: 'Reddit',
+        sourceKey: 'reddit',
+        time: timeAgo(p.data.created_utc),
+        ts: p.data.created_utc * 1000,
+        score: `${p.data.score} pts`,
+        domain: p.data.domain || 'reddit.com',
+      }));
+  } catch (e) {
+    console.warn('Reddit fetch error:', e);
+    return [];
+  }
+}
+
+async function fetchAllNews() {
+  if (isLoading) return;
+  isLoading = true;
+
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  setStatus('正在获取最新科技资讯…', false);
+  showSkeleton();
+
+  try {
+    const [hn, gh, ph, rd] = await Promise.allSettled([
+      fetchHN(), fetchGitHub(), fetchProductHunt(), fetchReddit()
+    ]);
+
+    allNews = [
+      ...(hn.status === 'fulfilled' ? hn.value : []),
+      ...(gh.status === 'fulfilled' ? gh.value : []),
+      ...(ph.status === 'fulfilled' ? ph.value : []),
+      ...(rd.status === 'fulfilled' ? rd.value : []),
+    ];
+
+    allNews.sort((a, b) => b.ts - a.ts);
+
+    if (allNews.length === 0) {
+      showError('未能获取到任何新闻，请检查网络后重试');
+      setStatus('获取失败', true);
+    } else {
+      applyFilter();
+      setStatus(`已加载 ${allNews.length} 条科技资讯`, false);
+      setUpdateTime();
+    }
+  } catch (e) {
+    showError('网络请求出错: ' + e.message);
+    setStatus('获取失败', true);
+  } finally {
+    btn.classList.remove('spinning');
+    isLoading = false;
+  }
+}
+
+function applyFilter() {
+  const items = currentSource === 'all'
+    ? allNews
+    : allNews.filter(n => n.sourceKey === currentSource);
+  renderNews(items);
+}
+
+function switchTab(el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  currentSource = el.dataset.source;
+  applyFilter();
+}
+
+function refreshAll() {
+  fetchAllNews();
+}
+
+fetchAllNews();
+</script>
+</body>
+</html>
