@@ -293,7 +293,7 @@ footer {
   <div class="news-list" id="newsList"></div>
 </main>
 
-<footer>数据来源: Reuters / BBC / NPR / CNN / AP / Al Jazeera / Hacker News / GitHub / Dev.to / TechCrunch / The Verge</footer>
+<footer>数据来源: NPR / ABC / CBS / PBS / BBC / Guardian / Al Jazeera / DW / France24 / UN News / HN / GitHub / Dev.to</footer>
 
 <script>
 const SOURCES = {
@@ -434,21 +434,22 @@ async function fetchRSSFeeds(feeds, sourceKey, cssClass) {
 
 async function fetchUSNews() {
   return fetchRSSFeeds([
-    'https://rss.nytimes.com/services/xml/rss/nyt/US.xml',
     'https://feeds.npr.org/1001/rss.xml',
-    'http://rss.cnn.com/rss/cnn_us.rss',
-    'https://feeds.reuters.com/reuters/domesticNews',
-    'https://feeds.washingtonpost.com/rss/national',
+    'https://abcnews.go.com/abcnews/usheadlines',
+    'https://www.cbsnews.com/latest/rss/us',
+    'https://thehill.com/feed/',
+    'https://www.pbs.org/newshour/feeds/rss/headlines',
   ], 'usnews', 'usnews');
 }
 
 async function fetchWorldNews() {
   return fetchRSSFeeds([
     'https://feeds.bbci.co.uk/news/world/rss.xml',
-    'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',
-    'https://feeds.reuters.com/reuters/worldNews',
-    'http://rss.cnn.com/rss/edition_world.rss',
+    'https://www.theguardian.com/world/rss',
     'https://www.aljazeera.com/xml/rss/all.xml',
+    'https://rss.dw.com/rdf/rss-en-all',
+    'https://news.un.org/feed/subscribe/en/news/all/rss.xml',
+    'https://www.france24.com/en/rss',
   ], 'world', 'world');
 }
 
