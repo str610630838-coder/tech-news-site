@@ -189,7 +189,7 @@ main {
 .card-source.hn { background: #1a0f00; color: #ff9340; }
 .card-source.github { background: #0a1a0a; color: #7ee87e; }
 .card-source.devto { background: #0a0a1a; color: #a0a0ff; }
-.card-source.lobsters { background: #1a0a0a; color: #ff7070; }
+.card-source.algolia { background: #1a0a1a; color: #d070ff; }
 .card-source.rss { background: #1a1a0a; color: #e0d060; }
 
 .card-time { font-size: 0.7rem; color: var(--text-dim); }
@@ -275,7 +275,7 @@ footer {
     <button class="tab" data-source="hn" onclick="switchTab(this)">Hacker News</button>
     <button class="tab" data-source="github" onclick="switchTab(this)">GitHub 热榜</button>
     <button class="tab" data-source="devto" onclick="switchTab(this)">Dev.to</button>
-    <button class="tab" data-source="lobsters" onclick="switchTab(this)">Lobsters</button>
+    <button class="tab" data-source="algolia" onclick="switchTab(this)">HN 最新</button>
     <button class="tab" data-source="rss" onclick="switchTab(this)">科技 RSS</button>
   </div>
 </header>
@@ -289,15 +289,15 @@ footer {
   <div class="news-list" id="newsList"></div>
 </main>
 
-<footer>数据来源: Hacker News / GitHub / Dev.to / Lobsters / TechCrunch RSS</footer>
+<footer>数据来源: Hacker News / GitHub / Dev.to / HN Algolia / TechCrunch / The Verge / ArsTechnica</footer>
 
 <script>
 const SOURCES = {
   hn: { name: 'Hacker News', cssClass: 'hn' },
   github: { name: 'GitHub', cssClass: 'github' },
   devto: { name: 'Dev.to', cssClass: 'devto' },
-  lobsters: { name: 'Lobsters', cssClass: 'lobsters' },
-  rss: { name: '科技 RSS', cssClass: 'rss' },
+  algolia: { name: 'HN 最新', cssClass: 'algolia' },
+  rss: { name: '科技媒体', cssClass: 'rss' },
 };
 
 let allNews = [];
@@ -462,29 +462,31 @@ async function fetchDevTo() {
   }));
 }
 
-async function fetchLobsters() {
-  const res = await fetchWithTimeout('https://lobste.rs/hottest.json');
-  if (!res.ok) throw new Error(`Lobsters API ${res.status}`);
-  const stories = await res.json();
-  return stories.slice(0, 25).map(s => ({
-    title: s.title,
-    desc: s.tags ? s.tags.join(', ') : '',
-    url: s.url || s.comments_url,
-    source: 'Lobsters',
-    sourceKey: 'lobsters',
-    cssClass: 'lobsters',
-    time: dateAgo(s.created_at),
-    ts: new Date(s.created_at).getTime(),
-    score: s.score != null ? `${s.score} pts` : '',
-    domain: s.url ? extractDomain(s.url) : 'lobste.rs',
-  }));
+async function fetchAlgoliaHN() {
+  const res = await fetchWithTimeout('https://hn.algolia.com/api/v1/search?tags=story&hitsPerPage=25&numericFilters=points>20');
+  if (!res.ok) throw new Error(`Algolia API ${res.status}`);
+  const data = await res.json();
+  return (data.hits || []).map(h => ({
+    title: h.title || h.story_title || '',
+    desc: '',
+    url: h.url || `https://news.ycombinator.com/item?id=${h.objectID}`,
+    source: 'HN 最新',
+    sourceKey: 'algolia',
+    cssClass: 'algolia',
+    time: dateAgo(h.created_at),
+    ts: new Date(h.created_at).getTime(),
+    score: h.points ? `${h.points} pts` : '',
+    domain: h.url ? extractDomain(h.url) : 'news.ycombinator.com',
+  })).filter(n => n.title);
 }
 
 async function fetchRSS() {
   const feeds = [
     'https://feeds.feedburner.com/TechCrunch/',
     'https://www.theverge.com/rss/index.xml',
-    'https://hnrss.org/newest?points=50&count=15',
+    'https://feeds.arstechnica.com/arstechnica/technology-lab',
+    'https://www.wired.com/feed/rss',
+    'https://lobste.rs/rss',
   ];
   const results = await Promise.allSettled(
     feeds.map(async feedUrl => {
@@ -540,15 +542,15 @@ async function fetchAllNews() {
   renderSourceStatus();
   showSkeleton();
 
-  const [hn, gh, dt, lb, rss] = await Promise.all([
+  const [hn, gh, dt, al, rss] = await Promise.all([
     safeFetch('hn', fetchHN),
     safeFetch('github', fetchGitHub),
     safeFetch('devto', fetchDevTo),
-    safeFetch('lobsters', fetchLobsters),
+    safeFetch('algolia', fetchAlgoliaHN),
     safeFetch('rss', fetchRSS),
   ]);
 
-  allNews = [...hn, ...gh, ...dt, ...lb, ...rss];
+  allNews = [...hn, ...gh, ...dt, ...al, ...rss];
   allNews.sort((a, b) => b.ts - a.ts);
 
   const okCount = Object.values(sourceResults).filter(r => r && r.ok).length;
