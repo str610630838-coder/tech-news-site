@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-<title>今日科技快讯</title>
+<title>今日快讯 - 科技 / 美国 / 国际</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600;800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
 <style>
@@ -191,6 +191,8 @@ main {
 .card-source.devto { background: #0a0a1a; color: #a0a0ff; }
 .card-source.algolia { background: #1a0a1a; color: #d070ff; }
 .card-source.rss { background: #1a1a0a; color: #e0d060; }
+.card-source.usnews { background: #0a0a1f; color: #60a0ff; }
+.card-source.world { background: #0f1a1a; color: #50d0c0; }
 
 .card-time { font-size: 0.7rem; color: var(--text-dim); }
 
@@ -261,7 +263,7 @@ footer {
 
 <header>
   <div class="header-row">
-    <div class="logo">TECH//NEWS <span>TODAY</span></div>
+    <div class="logo">NEWS//HUB <span>TODAY</span></div>
     <button id="refreshBtn" onclick="refreshAll()">
       <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
@@ -272,11 +274,13 @@ footer {
   </div>
   <div class="tabs" id="tabs">
     <button class="tab active" data-source="all" onclick="switchTab(this)">全部</button>
+    <button class="tab" data-source="usnews" onclick="switchTab(this)">美国时事</button>
+    <button class="tab" data-source="world" onclick="switchTab(this)">国际新闻</button>
     <button class="tab" data-source="hn" onclick="switchTab(this)">Hacker News</button>
-    <button class="tab" data-source="github" onclick="switchTab(this)">GitHub 热榜</button>
+    <button class="tab" data-source="github" onclick="switchTab(this)">GitHub</button>
     <button class="tab" data-source="devto" onclick="switchTab(this)">Dev.to</button>
     <button class="tab" data-source="algolia" onclick="switchTab(this)">HN 最新</button>
-    <button class="tab" data-source="rss" onclick="switchTab(this)">科技 RSS</button>
+    <button class="tab" data-source="rss" onclick="switchTab(this)">科技媒体</button>
   </div>
 </header>
 
@@ -289,10 +293,12 @@ footer {
   <div class="news-list" id="newsList"></div>
 </main>
 
-<footer>数据来源: Hacker News / GitHub / Dev.to / HN Algolia / TechCrunch / The Verge / ArsTechnica</footer>
+<footer>数据来源: Reuters / BBC / NPR / CNN / AP / Al Jazeera / Hacker News / GitHub / Dev.to / TechCrunch / The Verge</footer>
 
 <script>
 const SOURCES = {
+  usnews: { name: '美国时事', cssClass: 'usnews' },
+  world: { name: '国际新闻', cssClass: 'world' },
   hn: { name: 'Hacker News', cssClass: 'hn' },
   github: { name: 'GitHub', cssClass: 'github' },
   devto: { name: 'Dev.to', cssClass: 'devto' },
@@ -397,6 +403,55 @@ function showError(msg) {
     </div>`;
 }
 
+function rssProxy(feedUrl) {
+  return `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
+}
+
+async function fetchRSSFeeds(feeds, sourceKey, cssClass) {
+  const results = await Promise.allSettled(
+    feeds.map(async feedUrl => {
+      const res = await fetchWithTimeout(rssProxy(feedUrl));
+      if (!res.ok) throw new Error(`RSS ${res.status}`);
+      const data = await res.json();
+      if (data.status !== 'ok') throw new Error('RSS parse failed');
+      const feedName = data.feed?.title || 'News';
+      return (data.items || []).map(item => ({
+        title: item.title,
+        desc: (item.description || '').replace(/<[^>]*>/g, '').replace(/&[a-z]+;/gi, ' ').trim().slice(0, 150),
+        url: item.link,
+        source: feedName,
+        sourceKey,
+        cssClass,
+        time: dateAgo(item.pubDate),
+        ts: new Date(item.pubDate).getTime(),
+        score: '',
+        domain: item.link ? extractDomain(item.link) : '',
+      }));
+    })
+  );
+  return results.filter(r => r.status === 'fulfilled').flatMap(r => r.value);
+}
+
+async function fetchUSNews() {
+  return fetchRSSFeeds([
+    'https://rss.nytimes.com/services/xml/rss/nyt/US.xml',
+    'https://feeds.npr.org/1001/rss.xml',
+    'http://rss.cnn.com/rss/cnn_us.rss',
+    'https://feeds.reuters.com/reuters/domesticNews',
+    'https://feeds.washingtonpost.com/rss/national',
+  ], 'usnews', 'usnews');
+}
+
+async function fetchWorldNews() {
+  return fetchRSSFeeds([
+    'https://feeds.bbci.co.uk/news/world/rss.xml',
+    'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',
+    'https://feeds.reuters.com/reuters/worldNews',
+    'http://rss.cnn.com/rss/edition_world.rss',
+    'https://www.aljazeera.com/xml/rss/all.xml',
+  ], 'world', 'world');
+}
+
 async function fetchHN() {
   const topRes = await fetchWithTimeout('https://hacker-news.firebaseio.com/v0/topstories.json');
   const ids = (await topRes.json()).slice(0, 30);
@@ -481,38 +536,13 @@ async function fetchAlgoliaHN() {
 }
 
 async function fetchRSS() {
-  const feeds = [
+  return fetchRSSFeeds([
     'https://feeds.feedburner.com/TechCrunch/',
     'https://www.theverge.com/rss/index.xml',
     'https://feeds.arstechnica.com/arstechnica/technology-lab',
     'https://www.wired.com/feed/rss',
     'https://lobste.rs/rss',
-  ];
-  const results = await Promise.allSettled(
-    feeds.map(async feedUrl => {
-      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
-      const res = await fetchWithTimeout(apiUrl);
-      if (!res.ok) throw new Error(`RSS proxy ${res.status}`);
-      const data = await res.json();
-      if (data.status !== 'ok') throw new Error('RSS parse failed');
-      const feedName = data.feed?.title || 'RSS';
-      return (data.items || []).map(item => ({
-        title: item.title,
-        desc: (item.description || '').replace(/<[^>]*>/g, '').slice(0, 120),
-        url: item.link,
-        source: feedName,
-        sourceKey: 'rss',
-        cssClass: 'rss',
-        time: dateAgo(item.pubDate),
-        ts: new Date(item.pubDate).getTime(),
-        score: '',
-        domain: item.link ? extractDomain(item.link) : '',
-      }));
-    })
-  );
-  return results
-    .filter(r => r.status === 'fulfilled')
-    .flatMap(r => r.value);
+  ], 'rss', 'rss');
 }
 
 async function safeFetch(key, fetchFn) {
@@ -537,12 +567,14 @@ async function fetchAllNews() {
 
   const btn = document.getElementById('refreshBtn');
   btn.classList.add('spinning');
-  setStatus('正在获取最新科技资讯…', '');
+  setStatus('正在获取全球最新资讯…', '');
   sourceResults = {};
   renderSourceStatus();
   showSkeleton();
 
-  const [hn, gh, dt, al, rss] = await Promise.all([
+  const [us, intl, hn, gh, dt, al, rss] = await Promise.all([
+    safeFetch('usnews', fetchUSNews),
+    safeFetch('world', fetchWorldNews),
     safeFetch('hn', fetchHN),
     safeFetch('github', fetchGitHub),
     safeFetch('devto', fetchDevTo),
@@ -550,7 +582,7 @@ async function fetchAllNews() {
     safeFetch('rss', fetchRSS),
   ]);
 
-  allNews = [...hn, ...gh, ...dt, ...al, ...rss];
+  allNews = [...us, ...intl, ...hn, ...gh, ...dt, ...al, ...rss];
   allNews.sort((a, b) => b.ts - a.ts);
 
   const okCount = Object.values(sourceResults).filter(r => r && r.ok).length;
@@ -563,7 +595,7 @@ async function fetchAllNews() {
     applyFilter();
     setUpdateTime();
     if (okCount === totalSources) {
-      setStatus(`已加载 ${allNews.length} 条科技资讯`, '');
+      setStatus(`已加载 ${allNews.length} 条资讯`, '');
     } else {
       setStatus(`已加载 ${allNews.length} 条（${okCount}/${totalSources} 源成功）`, 'partial');
     }
